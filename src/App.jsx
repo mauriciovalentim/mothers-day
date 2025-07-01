@@ -26,7 +26,7 @@ function App() {
     const [guesses, setGuesses] = useState(3);
     const [score, setScore] = useState(0);
 
-    const pickedWordAndCategory = () => {
+    const pickedWordAndCategory = useCallback(() => {
         const categories = Object.keys(words);
         const category =
             categories[
@@ -35,9 +35,10 @@ function App() {
         const word =
             words[category][Math.floor(Math.random() * words[category].length)];
         return { word, category };
-    };
+    }, [words]);
 
-    const startGame = () => {
+    const startGame = useCallback(() => {
+        clearLetterStates
         const { word, category } = pickedWordAndCategory();
         console.log(word, category);
         let wordLetters = word.split("").map((letter) => letter.toLowerCase());
@@ -47,7 +48,7 @@ function App() {
         setPickedCategory(category);
         setLetters(wordLetters);
         setGameStage(stages[1].name);
-    };
+    }, [pickedWordAndCategory]);
     const verifyLetter = (letter) => {
         const normalizedLetter = letter.toLowerCase();
 
@@ -55,6 +56,7 @@ function App() {
             guessedLetters.includes(normalizedLetter) ||
             wrongLetters.includes(normalizedLetter)
         ) {
+            console.log("Essa letra não pode ser repetida!");
             return;
         }
         if (letters.includes(normalizedLetter)) {
@@ -71,7 +73,35 @@ function App() {
         }
         // setGameStage(stages[2].name);
     };
+
+    const clearLetterStates = () => {
+        setGuessedLetters([]);
+        setWrongLetters([]);
+    };
+    useEffect(() => {
+        if (guesses <= 0) {
+            // Game Over
+            clearLetterStates();
+            setGameStage(stages[2].name);
+        }
+    }, [guesses]);
+
+    useEffect(() => {
+        if (guessedLetters.length === letters.length) {
+            // Player won
+            const uniqueLetters = [...new Set(letters)];
+
+            if (guessedLetters.length === uniqueLetters.length) {
+                setScore((currentScore) => currentScore + 100);
+            }
+            startGame();
+
+        }
+    }, [guessedLetters, letters, startGame]);
     const retry = () => {
+        setScore(0);
+        setGuesses(3);
+
         setGameStage(stages[0].name);
     };
     return (
@@ -89,7 +119,7 @@ function App() {
                     score={score}
                 />
             )}
-            {gameStage === "end" && <GameOver retry={retry} />}
+            {gameStage === "end" && <GameOver retry={retry} score={score} />}
         </main>
     );
 }
